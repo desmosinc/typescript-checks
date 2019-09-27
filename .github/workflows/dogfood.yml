@@ -21,9 +21,9 @@ jobs:
       run: |
         npm install
         npm run build
-    - name: Use Typescript ${{ typescript-version }}
+    - name: Use Typescript ${{ matrix.typescript-version }}
       run: |
-        npm install typescript@${{ typescript-version}}
+        npm install typescript@${{ matrix.typescript-version}}
     - name: Run checks
       run: |
         ./dist/index.js tsconfig.json --repo desmosinc/typescript-checks
