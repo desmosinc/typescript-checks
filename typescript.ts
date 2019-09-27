@@ -23,24 +23,31 @@ export async function typescriptCheck(github: Octokit, options: {
     name: "Typescript",
     status: "in_progress"
   });
+
   const compileErrors = getDiagnosticsForProject(tsConfigFile);
-  return github.checks.update({
-    check_run_id: tsCheck.data.id,
-    owner,
-    repo,
-    output: {
-      annotations: compileErrors.annotations.map(a => ({
-        ...a,
-        path: path.relative(baseDir, a.path) // patch file paths to be relative to git root
-      })),
-      summary:
-        `${compileErrors.globalErrors.length +
-          compileErrors.annotations.length} errors.\n\n` +
-        compileErrors.globalErrors.join("\n"),
-      title: "Typescript"
-    },
-    conclusion: compileErrors.hasFailures ? "failure" : "success"
-  });
+  compileErrors.annotations = compileErrors.annotations.map(a => ({
+    ...a,
+    path: path.relative(baseDir, a.path) // patch file paths to be relative to git root
+  }));
+
+  const summary = `${compileErrors.globalErrors.length +
+    compileErrors.annotations.length} errors.\n\n` +
+  compileErrors.globalErrors.join("\n");
+
+  while (compileErrors.annotations.length > 0) {
+    const batch = compileErrors.annotations.splice(0, 50);
+    await github.checks.update({
+      check_run_id: tsCheck.data.id,
+      owner,
+      repo,
+      output: {
+        annotations: batch,
+        summary,
+        title: "Typescript"
+      },
+      conclusion: compileErrors.hasFailures ? "failure" : "success"
+    });
+  }
 }
 
 /**

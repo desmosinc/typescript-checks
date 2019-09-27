@@ -24,25 +24,29 @@ export async function tslintCheck(github: Octokit, options: {
     status: "in_progress"
   });
 
-  const lintResults = getLintResultsForProject({ tsConfigFile });
+  const lintResults = getLintResultsForProject({ tsConfigFile }).map(a => ({
+    ...a,
+    path: path.relative(baseDir, a.path) // patch file paths to be relative to git root
+  }))
   const lintErrors = lintResults.filter(a => a.annotation_level === "failure");
   const conclusion = lintErrors.length > 0 ? "failure" : "success";
 
-  return github.checks.update({
-    check_run_id: tslintCheck.data.id,
-    owner,
-    repo,
-    output: {
-      annotations: lintResults.map(a => ({
-        ...a,
-        path: path.relative(baseDir, a.path) // patch file paths to be relative to git root
-      })),
-      summary: `${lintErrors.length} errors, ${lintResults.length -
-        lintErrors.length} warnings.`,
-      title: "TSLint"
-    },
-    conclusion
-  });
+  const summary = `${lintErrors.length} errors, ${lintResults.length - lintErrors.length} warnings.`;
+
+  while (lintResults.length > 0) {
+    const batch = lintResults.splice(0, 50);
+    await github.checks.update({
+      check_run_id: tslintCheck.data.id,
+      owner,
+      repo,
+      output: {
+        annotations: batch,
+        summary,
+        title: "TSLint"
+      },
+      conclusion
+    });
+  }
 }
 
 /**
