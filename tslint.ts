@@ -7,7 +7,10 @@ import { getGitRepositoryDirectoryForFile, getGitSHA } from "./git-helpers";
 /**
  * Run TSLin on the given project and post results to Github Checks API.
  */
-export async function tslintCheck(tsConfigFile: string, checkOptions?: CheckOptions) {
+export async function tslintCheck(
+  tsConfigFile: string,
+  checkOptions?: CheckOptions
+) {
   const baseDir = getGitRepositoryDirectoryForFile(tsConfigFile);
 
   let check;
@@ -17,37 +20,43 @@ export async function tslintCheck(tsConfigFile: string, checkOptions?: CheckOpti
       repo: checkOptions.repo,
       head_sha: getGitSHA(baseDir),
       name: "TSLint",
-      status: "in_progress",
+      status: "in_progress"
     });
+    console.log(`Created check ${check.data.id} (${check.data.url})`);
   }
 
   const linterResult = getLintResultsForProject({ tsConfigFile });
-  const annotations = linterResult.annotations.map((a) => ({
+  const annotations = linterResult.annotations.map(a => ({
     ...a,
-    path: path.relative(baseDir, a.path), // patch file paths to be relative to git root
+    path: path.relative(baseDir, a.path) // patch file paths to be relative to git root
   }));
-  const errorCount = linterResult.annotations.filter((a) => a.annotation_level === "failure").length;
-  const warningCount = linterResult.annotations.length - errorCount;
-  const summary = `${errorCount} errors, ${warningCount} warnings.`;
-  const conclusion = errorCount > 0 ? "failure" : "success";
+  const summary = `${linterResult.errorCount} errors, ${linterResult.warningCount} warnings.`;
+  const conclusion = linterResult.errorCount > 0 ? "failure" : "success";
 
   console.log(`TSLint: ${summary}`);
   console.log(linterResult.consoleOutput);
 
   if (checkOptions && check) {
-    while (annotations.length > 0) {
+    for (
+      let updateCount = 0;
+      updateCount === 0 || annotations.length > 0;
+      updateCount++
+    ) {
       const batch = annotations.splice(0, 50);
-      await checkOptions.github.checks.update({
+      const update = await checkOptions.github.checks.update({
         check_run_id: check.data.id,
         owner: checkOptions.owner,
         repo: checkOptions.repo,
         output: {
           annotations: batch,
           summary,
-          title: "TSLint",
+          title: "TSLint"
         },
-        conclusion,
+        conclusion
       });
+      console.log(
+        `Updated check ${update.data.id} with ${batch.length} annotations.`
+      );
     }
   }
 }
@@ -61,22 +70,24 @@ export function getLintResultsForProject(options: {
 }): {
   consoleOutput: string;
   annotations: ChecksCreateParamsOutputAnnotations[];
- } {
+  errorCount: number;
+  warningCount: number;
+} {
   const program = Linter.createProgram(options.tsConfigFile);
   const linter = new Linter(
     {
       fix: false,
-      formatter: Formatters.CodeFrameFormatter,
+      formatter: Formatters.CodeFrameFormatter
     },
-    program,
+    program
   );
 
   const files = Linter.getFileNames(program);
-  files.forEach((file) => {
+  files.forEach(file => {
     const fileContents = program.getSourceFile(file)!.getFullText();
     const configuration = Configuration.findConfiguration(
       options.tslintConfigFile || null,
-      file,
+      file
     ).results;
     linter.lint(file, fileContents, configuration);
   });
@@ -84,14 +95,17 @@ export function getLintResultsForProject(options: {
   const results = linter.getResult();
   const annotations: ChecksCreateParamsOutputAnnotations[] = [];
   for (const failure of results.failures) {
-    if (failure.getRuleSeverity() === "off") { continue; }
+    if (failure.getRuleSeverity() === "off") {
+      continue;
+    }
     let annotation: ChecksCreateParamsOutputAnnotations = {
-      annotation_level: failure.getRuleSeverity() === "error" ? "failure" : "warning",
+      annotation_level:
+        failure.getRuleSeverity() === "error" ? "failure" : "warning",
       path: failure.getFileName(),
       title: failure.getRuleName(),
       message: failure.getFailure(),
       start_line: failure.getStartPosition().getLineAndCharacter().line + 1,
-      end_line: failure.getEndPosition().getLineAndCharacter().line + 1,
+      end_line: failure.getEndPosition().getLineAndCharacter().line + 1
     };
     if (
       annotation.start_line &&
@@ -101,7 +115,7 @@ export function getLintResultsForProject(options: {
         ...annotation,
         start_column:
           failure.getStartPosition().getLineAndCharacter().character + 1,
-        end_column: failure.getEndPosition().getLineAndCharacter().character + 1,
+        end_column: failure.getEndPosition().getLineAndCharacter().character + 1
       };
     }
     annotations.push(annotation);
@@ -110,5 +124,7 @@ export function getLintResultsForProject(options: {
   return {
     consoleOutput: results.output,
     annotations,
+    errorCount: results.errorCount,
+    warningCount: results.warningCount
   };
 }

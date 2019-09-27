@@ -26,9 +26,9 @@ export type CheckOptions = {
 };
 
 const _ = require("yargs")
-.usage(
-  "$0 <tsconfig>",
-  `Get Typescript and TSLint diagnostics for the Typescript project and post results as a "check run" to the given GitHub repository.
+  .usage(
+    "$0 <tsconfig>",
+    `Get Typescript and TSLint diagnostics for the Typescript project and post results as a "check run" to the given GitHub repository.
 
   The following environment variables, corresponding to a GitHub app with 'checks:write' permission, are used to authenticate with the GitHub API:
 
@@ -38,26 +38,26 @@ const _ = require("yargs")
   GITHUB_APP_CLIENT_SECRET
 
   They can also be provided in a ".env" file in the current working directory.`,
-  (yargs: any) => {
-    yargs.positional("tsconfig", {
-      describe: "Path to the TypeScript project configuration file",
-      type: "string",
-      default: path.join(process.cwd(), "tsconfig.json"),
-    })
-    .option("repo", {
-      describe: 'The github repository, "owner/repo"',
-      type: "string",
-    });
-  },
-  (argv: ParsedArgs) => {
-    runChecks(argv).catch((e) => {
-      console.error(e);
-      process.exit(1);
-    });
-  },
-)
-.help("help")
-.argv;
+    (yargs: any) => {
+      yargs
+        .positional("tsconfig", {
+          describe: "Path to the TypeScript project configuration file",
+          type: "string",
+          default: path.join(process.cwd(), "tsconfig.json")
+        })
+        .option("repo", {
+          describe: 'The github repository, "owner/repo"',
+          type: "string"
+        });
+    },
+    (argv: ParsedArgs) => {
+      runChecks(argv).catch(e => {
+        console.error(e);
+        process.exit(1);
+      });
+    }
+  )
+  .help("help").argv;
 
 async function runChecks(argv: ParsedArgs) {
   let check: CheckOptions | undefined;
@@ -65,20 +65,20 @@ async function runChecks(argv: ParsedArgs) {
     const [owner, repo] = argv.repo.split("/");
     if (!owner || !repo) {
       console.error(
-        `Invalid --repo argument ${argv.repo}. Expected "owner/repo".`,
+        `Invalid --repo argument ${argv.repo}. Expected "owner/repo".`
       );
       process.exit(1);
     }
     check = {
       github: await authenticate(),
       owner,
-      repo,
+      repo
     };
   }
 
   return Promise.all([
     typescriptCheck(argv.tsconfig, check),
-    tslintCheck(argv.tsconfig, check),
+    tslintCheck(argv.tsconfig, check)
   ]);
 }
 
@@ -88,7 +88,7 @@ async function authenticate(): Promise<Octokit> {
     privateKey: process.env.GITHUB_APP_PRIVATE_KEY || "",
     installationId: Number(process.env.GITHUB_APP_INSTALLATION_ID),
     clientId: process.env.GITHUB_APP_CLIENT_ID,
-    clientSecret: process.env.GITHUB_APP_CLIENT_SECRET,
+    clientSecret: process.env.GITHUB_APP_CLIENT_SECRET
   });
 
   // Retrieve installation access token
@@ -97,6 +97,6 @@ async function authenticate(): Promise<Octokit> {
   // workaround TS versions being inconsistent about how they handle the import
   const octokit = require("@octokit/rest");
   return new octokit({
-    auth: installationAuthentication.token,
+    auth: installationAuthentication.token
   });
 }
