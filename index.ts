@@ -1,16 +1,17 @@
 #!/usr/bin/env node
+// tslint:disable:no-var-requires
 
 require("dotenv").config();
 require("ts-node/register/transpile-only");
-import * as Octokit from "@octokit/rest";
 import { createAppAuth } from "@octokit/auth-app";
-import { typescriptCheck } from "./typescript";
-import { tslintCheck } from "./tslint";
+import * as Octokit from "@octokit/rest";
 import * as path from "path";
+import { tslintCheck } from "./tslint";
+import { typescriptCheck } from "./typescript";
 
 const TSLINT_CHECK_APP_ID = 42099;
 
-require("yargs")
+const _ = require("yargs")
 .usage(
   "$0 <tsconfig>",
   `Get Typescript and TSLint diagnostics for the Typescript project and post results as a "check run" to the given GitHub repository.
@@ -24,33 +25,33 @@ require("yargs")
 
   They can also be provided in a ".env" file in the current working directory.`,
   (yargs: any) => {
-    yargs.positional('tsconfig', {
-      describe: 'Path to the TypeScript project configuration file',
-      type: 'string',
-      default: path.join(process.cwd(), 'tsconfig.json')
+    yargs.positional("tsconfig", {
+      describe: "Path to the TypeScript project configuration file",
+      type: "string",
+      default: path.join(process.cwd(), "tsconfig.json"),
     })
-    .option('repo', {
+    .option("repo", {
       describe: 'The github repository, "owner/repo"',
       demandOption: true,
-      type: 'string'
+      type: "string",
     })
-    .demand(['repo']);
+    .demand(["repo"]);
   },
   (argv: {tsconfig: string, repo: string, dryRun: string}) => {
     const tsConfigFile = argv.tsconfig;
     const [owner, repo] = argv.repo.split("/");
     if (!owner || !repo) {
       console.error(
-        `Invalid --repo argument ${argv.repo}. Expected "owner/repo".`
+        `Invalid --repo argument ${argv.repo}. Expected "owner/repo".`,
       );
       process.exit(1);
     }
 
-    runChecks({tsConfigFile, repo, owner}).catch(e => {
+    runChecks({tsConfigFile, repo, owner}).catch((e) => {
       console.error(e);
       process.exit(1);
     });
-  }
+  },
 )
 .help("help")
 .argv;
@@ -61,7 +62,7 @@ async function runChecks(options: {tsConfigFile: string, repo: string, owner: st
 
   return Promise.all([
     typescriptCheck(github, { owner, repo, tsConfigFile }),
-    tslintCheck(github, { owner, repo, tsConfigFile })
+    tslintCheck(github, { owner, repo, tsConfigFile }),
   ]);
 }
 
@@ -71,14 +72,15 @@ async function authenticate(): Promise<Octokit> {
     privateKey: process.env.GITHUB_APP_PRIVATE_KEY || "",
     installationId: Number(process.env.GITHUB_APP_INSTALLATION_ID),
     clientId: process.env.GITHUB_APP_CLIENT_ID,
-    clientSecret: process.env.GITHUB_APP_CLIENT_SECRET
+    clientSecret: process.env.GITHUB_APP_CLIENT_SECRET,
   });
 
   // Retrieve installation access token
   const installationAuthentication = await auth({ type: "installation" });
 
-  const octokit = require("@octokit/rest"); // workaround TS versions being inconsistent about how they handle the import
+  // workaround TS versions being inconsistent about how they handle the import
+  const octokit = require("@octokit/rest");
   return new octokit({
-    auth: installationAuthentication.token
+    auth: installationAuthentication.token,
   });
 }

@@ -1,8 +1,8 @@
-import * as ts from "typescript";
 import { ChecksCreateParamsOutputAnnotations } from "@octokit/rest";
 import Octokit = require("@octokit/rest");
-import { getGitSHA, getGitRepositoryDirectoryForFile } from "./git-helpers";
 import * as path from "path";
+import * as ts from "typescript";
+import { getGitRepositoryDirectoryForFile, getGitSHA } from "./git-helpers";
 
 /**
  * Run Typescript compiler on the given project and post results to Github Checks API.
@@ -21,13 +21,13 @@ export async function typescriptCheck(github: Octokit, options: {
     repo,
     head_sha: getGitSHA(baseDir),
     name: "Typescript",
-    status: "in_progress"
+    status: "in_progress",
   });
 
   const compileErrors = getDiagnosticsForProject(tsConfigFile);
-  compileErrors.annotations = compileErrors.annotations.map(a => ({
+  compileErrors.annotations = compileErrors.annotations.map((a) => ({
     ...a,
-    path: path.relative(baseDir, a.path) // patch file paths to be relative to git root
+    path: path.relative(baseDir, a.path), // patch file paths to be relative to git root
   }));
 
   const summary = `${compileErrors.globalErrors.length +
@@ -43,9 +43,9 @@ export async function typescriptCheck(github: Octokit, options: {
       output: {
         annotations: batch,
         summary,
-        title: "Typescript"
+        title: "Typescript",
       },
-      conclusion: compileErrors.hasFailures ? "failure" : "success"
+      conclusion: compileErrors.hasFailures ? "failure" : "success",
     });
   }
 }
@@ -56,7 +56,7 @@ export async function typescriptCheck(github: Octokit, options: {
 export function getDiagnosticsForProject(configFileName: string): {
   hasFailures: boolean,
   annotations: ChecksCreateParamsOutputAnnotations[],
-  globalErrors: string[]
+  globalErrors: string[],
 } {
   const parsedCommandLine = ts.getParsedCommandLineOfConfigFile(
     configFileName,
@@ -67,15 +67,15 @@ export function getDiagnosticsForProject(configFileName: string): {
         ts.formatDiagnostic(diagnostic, {
           getCurrentDirectory: ts.sys.getCurrentDirectory,
           getNewLine: () => ts.sys.newLine,
-          getCanonicalFileName: s => s
+          getCanonicalFileName: (s) => s,
         });
-      }
-    }
+      },
+    },
   );
 
   const program = ts.createProgram(parsedCommandLine!.fileNames, {
     ...parsedCommandLine!.options,
-    noEmit: true
+    noEmit: true,
   });
   const emitResult = program.emit();
 
@@ -90,33 +90,30 @@ export function getDiagnosticsForProject(configFileName: string): {
   for (const diagnostic of allDiagnostics) {
     if (diagnostic.file) {
       const start = diagnostic.file.getLineAndCharacterOfPosition(
-        diagnostic.start!
+        diagnostic.start!,
       );
       const end = diagnostic.file.getLineAndCharacterOfPosition(
-        diagnostic.start! + diagnostic.length!
+        diagnostic.start! + diagnostic.length!,
       );
 
-      const annotation_level =
-        diagnostic.category === ts.DiagnosticCategory.Error
-          ? "failure"
-          : diagnostic.category === ts.DiagnosticCategory.Warning
-          ? "warning"
-          : "notice";
-
       annotations.push({
-        annotation_level,
+        annotation_level: diagnostic.category === ts.DiagnosticCategory.Error
+        ? "failure"
+        : diagnostic.category === ts.DiagnosticCategory.Warning
+        ? "warning"
+        : "notice",
         start_line: start.line + 1,
         end_line: end.line + 1,
         message: ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
-        path: diagnostic.file.fileName
+        path: diagnostic.file.fileName,
       });
 
-      if (annotation_level === "failure") {
+      if (diagnostic.category === ts.DiagnosticCategory.Error) {
         hasFailures = true;
       }
     } else if (diagnostic.category === ts.DiagnosticCategory.Error) {
       globalErrors.push(
-        ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+        ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
       );
       hasFailures = true;
     }

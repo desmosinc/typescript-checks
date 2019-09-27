@@ -1,8 +1,8 @@
-import { Linter, Configuration } from "tslint";
 import { ChecksCreateParamsOutputAnnotations } from "@octokit/rest";
 import Octokit = require("@octokit/rest");
-import { getGitSHA, getGitRepositoryDirectoryForFile } from "./git-helpers";
 import * as path from "path";
+import { Configuration, Linter } from "tslint";
+import { getGitRepositoryDirectoryForFile, getGitSHA } from "./git-helpers";
 
 /**
  * Run TSLin on the given project and post results to Github Checks API.
@@ -16,19 +16,19 @@ export async function tslintCheck(github: Octokit, options: {
   const { owner, repo, tsConfigFile } = options;
   const baseDir = getGitRepositoryDirectoryForFile(tsConfigFile);
 
-  const tslintCheck = await github.checks.create({
+  const check = await github.checks.create({
     owner,
     repo,
     head_sha: getGitSHA(baseDir),
     name: "TSLint",
-    status: "in_progress"
+    status: "in_progress",
   });
 
-  const lintResults = getLintResultsForProject({ tsConfigFile }).map(a => ({
+  const lintResults = getLintResultsForProject({ tsConfigFile }).map((a) => ({
     ...a,
-    path: path.relative(baseDir, a.path) // patch file paths to be relative to git root
-  }))
-  const lintErrors = lintResults.filter(a => a.annotation_level === "failure");
+    path: path.relative(baseDir, a.path), // patch file paths to be relative to git root
+  }));
+  const lintErrors = lintResults.filter((a) => a.annotation_level === "failure");
   const conclusion = lintErrors.length > 0 ? "failure" : "success";
 
   const summary = `${lintErrors.length} errors, ${lintResults.length - lintErrors.length} warnings.`;
@@ -36,15 +36,15 @@ export async function tslintCheck(github: Octokit, options: {
   while (lintResults.length > 0) {
     const batch = lintResults.splice(0, 50);
     await github.checks.update({
-      check_run_id: tslintCheck.data.id,
+      check_run_id: check.data.id,
       owner,
       repo,
       output: {
         annotations: batch,
         summary,
-        title: "TSLint"
+        title: "TSLint",
       },
-      conclusion
+      conclusion,
     });
   }
 }
@@ -60,17 +60,17 @@ export function getLintResultsForProject(options: {
   const linter = new Linter(
     {
       fix: false,
-      formatter: "json"
+      formatter: "json",
     },
-    program
+    program,
   );
 
   const files = Linter.getFileNames(program);
-  files.forEach(file => {
+  files.forEach((file) => {
     const fileContents = program.getSourceFile(file)!.getFullText();
     const configuration = Configuration.findConfiguration(
       options.tslintConfigFile || null,
-      file
+      file,
     ).results;
     linter.lint(file, fileContents, configuration);
   });
@@ -78,17 +78,14 @@ export function getLintResultsForProject(options: {
   const results = linter.getResult();
   const annotations: ChecksCreateParamsOutputAnnotations[] = [];
   for (const failure of results.failures) {
-    if (failure.getRuleSeverity() === "off") continue;
-    const annotation_level =
-      failure.getRuleSeverity() === "error" ? "failure" : "warning";
-
+    if (failure.getRuleSeverity() === "off") { continue; }
     let annotation: ChecksCreateParamsOutputAnnotations = {
-      annotation_level,
+      annotation_level: failure.getRuleSeverity() === "error" ? "failure" : "warning",
       path: failure.getFileName(),
       title: failure.getRuleName(),
       message: failure.getFailure(),
       start_line: failure.getStartPosition().getLineAndCharacter().line + 1,
-      end_line: failure.getEndPosition().getLineAndCharacter().line + 1
+      end_line: failure.getEndPosition().getLineAndCharacter().line + 1,
     };
     if (
       annotation.start_line &&
@@ -98,7 +95,7 @@ export function getLintResultsForProject(options: {
         ...annotation,
         start_column:
           failure.getStartPosition().getLineAndCharacter().character + 1,
-        end_column: failure.getEndPosition().getLineAndCharacter().character + 1
+        end_column: failure.getEndPosition().getLineAndCharacter().character + 1,
       };
     }
     annotations.push(annotation);
