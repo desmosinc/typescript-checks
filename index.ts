@@ -12,7 +12,7 @@ const TSLINT_CHECK_APP_ID = 42099;
 
 require("yargs")
 .usage(
-  "$0 <tsconfig> --repo organization/repository",
+  "$0 <tsconfig>",
   `Get Typescript and TSLint diagnostics for the Typescript project and post results as a "check run" to the given GitHub repository.
 
   The following environment variables, corresponding to a GitHub app with 'checks:write' permission, are used to authenticate with the GitHub API:
@@ -29,9 +29,14 @@ require("yargs")
       type: 'string',
       default: path.join(process.cwd(), 'tsconfig.json')
     })
-    .describe("repo", 'The github repository, "owner/repo"')
+    .option('repo', {
+      describe: 'The github repository, "owner/repo"',
+      demandOption: true,
+      type: 'string'
+    })
+    .demand(['repo']);
   },
-  (argv: {tsconfig: string, repo: string}) => {
+  (argv: {tsconfig: string, repo: string, dryRun: string}) => {
     const tsConfigFile = argv.tsconfig;
     const [owner, repo] = argv.repo.split("/");
     if (!owner || !repo) {
