@@ -1,0 +1,35 @@
+{
+  "name": "typescript-checks",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "bin": "dist/index.js",
+  "files": [
+    "**/*.ts",
+    "**/*.json",
+    "dist"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc -p tsconfig.json"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@octokit/auth-app": "^2.1.2",
+    "@octokit/rest": "^16.30.1",
+    "dotenv": "^8.1.0",
+    "yargs": "^14.0.0"
+  },
+  "peerDependencies": {
+    "tslint": "^5.19.0",
+    "typescript": "^3.2.4"
+  },
+  "devDependencies": {
+    "prettier": "^1.18.2",
+    "ts-node": "^8.4.1",
+    "tslint": "^5.19.0",
+    "typescript": "^3.2.4"
+  }
+}
