@@ -11,6 +11,20 @@ import { typescriptCheck } from "./typescript";
 
 const TSLINT_CHECK_APP_ID = 42099;
 
+type ParsedArgs = {
+  tsconfig: string;
+  repo?: string;
+};
+
+export type CheckOptions = {
+  /**
+   * An Octokit instance, authenticated as a github app with checks:write permission
+   */
+  github: Octokit;
+  owner: string;
+  repo: string;
+};
+
 const _ = require("yargs")
 .usage(
   "$0 <tsconfig>",
@@ -32,22 +46,12 @@ const _ = require("yargs")
     })
     .option("repo", {
       describe: 'The github repository, "owner/repo"',
-      demandOption: true,
       type: "string",
     })
     .demand(["repo"]);
   },
-  (argv: {tsconfig: string, repo: string, dryRun: string}) => {
-    const tsConfigFile = argv.tsconfig;
-    const [owner, repo] = argv.repo.split("/");
-    if (!owner || !repo) {
-      console.error(
-        `Invalid --repo argument ${argv.repo}. Expected "owner/repo".`,
-      );
-      process.exit(1);
-    }
-
-    runChecks({tsConfigFile, repo, owner}).catch((e) => {
+  (argv: ParsedArgs) => {
+    runChecks(argv).catch((e) => {
       console.error(e);
       process.exit(1);
     });
@@ -56,13 +60,26 @@ const _ = require("yargs")
 .help("help")
 .argv;
 
-async function runChecks(options: {tsConfigFile: string, repo: string, owner: string}) {
-  const {tsConfigFile, repo, owner} = options;
-  const github = await authenticate();
+async function runChecks(argv: ParsedArgs) {
+  let check: CheckOptions | undefined;
+  if (argv.repo) {
+    const [owner, repo] = argv.repo.split("/");
+    if (!owner || !repo) {
+      console.error(
+        `Invalid --repo argument ${argv.repo}. Expected "owner/repo".`,
+      );
+      process.exit(1);
+    }
+    check = {
+      github: await authenticate(),
+      owner,
+      repo,
+    };
+  }
 
   return Promise.all([
-    typescriptCheck(github, { owner, repo, tsConfigFile }),
-    tslintCheck(github, { owner, repo, tsConfigFile }),
+    typescriptCheck(argv.tsconfig, check),
+    tslintCheck(argv.tsconfig, check),
   ]);
 }
 

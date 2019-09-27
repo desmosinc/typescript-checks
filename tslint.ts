@@ -1,28 +1,25 @@
 import { ChecksCreateParamsOutputAnnotations } from "@octokit/rest";
-import Octokit = require("@octokit/rest");
 import * as path from "path";
 import { Configuration, Linter } from "tslint";
+import { CheckOptions } from ".";
 import { getGitRepositoryDirectoryForFile, getGitSHA } from "./git-helpers";
 
 /**
  * Run TSLin on the given project and post results to Github Checks API.
- * @param github An Octokit instance, authenticated as a github app with checks:write permission
  */
-export async function tslintCheck(github: Octokit, options: {
-  owner: string;
-  repo: string;
-  tsConfigFile: string;
-}) {
-  const { owner, repo, tsConfigFile } = options;
+export async function tslintCheck(tsConfigFile: string, checkOptions?: CheckOptions) {
   const baseDir = getGitRepositoryDirectoryForFile(tsConfigFile);
 
-  const check = await github.checks.create({
-    owner,
-    repo,
-    head_sha: getGitSHA(baseDir),
-    name: "TSLint",
-    status: "in_progress",
-  });
+  let check;
+  if (checkOptions) {
+    check = await checkOptions.github.checks.create({
+      owner: checkOptions.owner,
+      repo: checkOptions.repo,
+      head_sha: getGitSHA(baseDir),
+      name: "TSLint",
+      status: "in_progress",
+    });
+  }
 
   const lintResults = getLintResultsForProject({ tsConfigFile }).map((a) => ({
     ...a,
@@ -33,19 +30,21 @@ export async function tslintCheck(github: Octokit, options: {
 
   const summary = `${lintErrors.length} errors, ${lintResults.length - lintErrors.length} warnings.`;
 
-  while (lintResults.length > 0) {
-    const batch = lintResults.splice(0, 50);
-    await github.checks.update({
-      check_run_id: check.data.id,
-      owner,
-      repo,
-      output: {
-        annotations: batch,
-        summary,
-        title: "TSLint",
-      },
-      conclusion,
-    });
+  if (checkOptions && check) {
+    while (lintResults.length > 0) {
+      const batch = lintResults.splice(0, 50);
+      await checkOptions.github.checks.update({
+        check_run_id: check.data.id,
+        owner: checkOptions.owner,
+        repo: checkOptions.repo,
+        output: {
+          annotations: batch,
+          summary,
+          title: "TSLint",
+        },
+        conclusion,
+      });
+    }
   }
 }
 
