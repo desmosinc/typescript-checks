@@ -47,8 +47,7 @@ const _ = require("yargs")
     .option("repo", {
       describe: 'The github repository, "owner/repo"',
       type: "string",
-    })
-    .demand(["repo"]);
+    });
   },
   (argv: ParsedArgs) => {
     runChecks(argv).catch((e) => {

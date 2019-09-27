@@ -21,19 +21,22 @@ export async function typescriptCheck(tsConfigFile: string, checkOptions?: Check
   });
 }
 
-  const compileErrors = getDiagnosticsForProject(tsConfigFile);
-  compileErrors.annotations = compileErrors.annotations.map((a) => ({
+  const compileResult = getDiagnosticsForProject(tsConfigFile);
+  compileResult.annotations = compileResult.annotations.map((a) => ({
     ...a,
     path: path.relative(baseDir, a.path), // patch file paths to be relative to git root
   }));
 
-  const summary = `${compileErrors.globalErrors.length +
-    compileErrors.annotations.length} errors.\n\n` +
-  compileErrors.globalErrors.join("\n");
+  const summary = `${compileResult.globalErrors.length +
+    compileResult.annotations.length} errors.\n\n` +
+  compileResult.globalErrors.join("\n");
+
+  console.log(`Typescript: ${summary}`);
+  console.log(compileResult.consoleOutput);
 
   if (checkOptions && check) {
-    while (compileErrors.annotations.length > 0) {
-      const batch = compileErrors.annotations.splice(0, 50);
+    while (compileResult.annotations.length > 0) {
+      const batch = compileResult.annotations.splice(0, 50);
       await checkOptions.github.checks.update({
         check_run_id: check.data.id,
         owner: checkOptions.owner,
@@ -43,7 +46,7 @@ export async function typescriptCheck(tsConfigFile: string, checkOptions?: Check
           summary,
           title: "Typescript",
         },
-        conclusion: compileErrors.hasFailures ? "failure" : "success",
+        conclusion: compileResult.hasFailures ? "failure" : "success",
       });
     }
   }
@@ -56,18 +59,21 @@ export function getDiagnosticsForProject(configFileName: string): {
   hasFailures: boolean,
   annotations: ChecksCreateParamsOutputAnnotations[],
   globalErrors: string[],
+  consoleOutput: string,
 } {
+  const diagnosticHost = {
+    getCurrentDirectory: ts.sys.getCurrentDirectory,
+    getNewLine: () => ts.sys.newLine,
+    getCanonicalFileName: (s: string) => s,
+  };
+
   const parsedCommandLine = ts.getParsedCommandLineOfConfigFile(
     configFileName,
     {},
     {
       ...ts.sys,
       onUnRecoverableConfigFileDiagnostic: (diagnostic: ts.Diagnostic) => {
-        ts.formatDiagnostic(diagnostic, {
-          getCurrentDirectory: ts.sys.getCurrentDirectory,
-          getNewLine: () => ts.sys.newLine,
-          getCanonicalFileName: (s) => s,
-        });
+        ts.formatDiagnostic(diagnostic, diagnosticHost);
       },
     },
   );
@@ -118,5 +124,7 @@ export function getDiagnosticsForProject(configFileName: string): {
     }
   }
 
-  return { hasFailures, annotations, globalErrors };
+  const consoleOutput = ts.formatDiagnosticsWithColorAndContext(allDiagnostics, diagnosticHost);
+
+  return { hasFailures, annotations, globalErrors, consoleOutput };
 }

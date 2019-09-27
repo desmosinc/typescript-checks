@@ -1,16 +1,13 @@
-name: Dogfood
+name: CI
 
 on: [push]
 
 jobs:
-  build:
-
+  dogfood:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         typescript-version: ['3.2.4', 'latest']
-
     steps:
     - uses: actions/checkout@v1
     - name: Use Node.js v12
@@ -26,7 +23,22 @@ jobs:
         npm install typescript@${{ matrix.typescript-version}}
     - name: Run checks
       run: |
-        ./dist/index.js tsconfig.json --repo desmosinc/typescript-checks
+        ./dist/index.js tsconfig.json
+  report-typescript-checks:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Use Node.js v12
+      uses: actions/setup-node@v1
+      with:
+        node-version: 12.x
+    - name: npm install and build
+      run: |
+        npm install
+        npm run build
+    - name: Run and report checks
+      run: |
+        ./dist/index.js tsconfig.json --repo ${{ github.repository }}
       env:
         GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
         GITHUB_APP_INSTALLATION_ID: ${{ secrets.GITHUB_APP_INSTALLATION_ID }}

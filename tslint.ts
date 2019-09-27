@@ -1,6 +1,6 @@
 import { ChecksCreateParamsOutputAnnotations } from "@octokit/rest";
 import * as path from "path";
-import { Configuration, Linter } from "tslint";
+import { Configuration, Formatters, Linter } from "tslint";
 import { CheckOptions } from ".";
 import { getGitRepositoryDirectoryForFile, getGitSHA } from "./git-helpers";
 
@@ -21,18 +21,22 @@ export async function tslintCheck(tsConfigFile: string, checkOptions?: CheckOpti
     });
   }
 
-  const lintResults = getLintResultsForProject({ tsConfigFile }).map((a) => ({
+  const linterResult = getLintResultsForProject({ tsConfigFile });
+  const annotations = linterResult.annotations.map((a) => ({
     ...a,
     path: path.relative(baseDir, a.path), // patch file paths to be relative to git root
   }));
-  const lintErrors = lintResults.filter((a) => a.annotation_level === "failure");
-  const conclusion = lintErrors.length > 0 ? "failure" : "success";
+  const errorCount = linterResult.annotations.filter((a) => a.annotation_level === "failure").length;
+  const warningCount = linterResult.annotations.length - errorCount;
+  const summary = `${errorCount} errors, ${warningCount} warnings.`;
+  const conclusion = errorCount > 0 ? "failure" : "success";
 
-  const summary = `${lintErrors.length} errors, ${lintResults.length - lintErrors.length} warnings.`;
+  console.log(`TSLint: ${summary}`);
+  console.log(linterResult.consoleOutput);
 
   if (checkOptions && check) {
-    while (lintResults.length > 0) {
-      const batch = lintResults.splice(0, 50);
+    while (annotations.length > 0) {
+      const batch = annotations.splice(0, 50);
       await checkOptions.github.checks.update({
         check_run_id: check.data.id,
         owner: checkOptions.owner,
@@ -54,12 +58,15 @@ export async function tslintCheck(tsConfigFile: string, checkOptions?: CheckOpti
 export function getLintResultsForProject(options: {
   tslintConfigFile?: string;
   tsConfigFile: string;
-}): ChecksCreateParamsOutputAnnotations[] {
+}): {
+  consoleOutput: string;
+  annotations: ChecksCreateParamsOutputAnnotations[];
+ } {
   const program = Linter.createProgram(options.tsConfigFile);
   const linter = new Linter(
     {
       fix: false,
-      formatter: "json",
+      formatter: Formatters.CodeFrameFormatter,
     },
     program,
   );
@@ -100,5 +107,8 @@ export function getLintResultsForProject(options: {
     annotations.push(annotation);
   }
 
-  return annotations;
+  return {
+    consoleOutput: results.output,
+    annotations,
+  };
 }
