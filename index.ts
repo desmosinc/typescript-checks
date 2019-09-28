@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // tslint:disable:no-var-requires
-
-require("dotenv").config();
 require("ts-node/register/transpile-only");
+import * as path from "path";
+require("dotenv").config({
+  path: process.env.ENV_FILE || path.join(process.cwd(), ".env")
+});
 import { createAppAuth } from "@octokit/auth-app";
 import * as Octokit from "@octokit/rest";
-import * as path from "path";
 import { tslintCheck } from "./tslint";
 import { typescriptCheck } from "./typescript";
 

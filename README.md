@@ -24,7 +24,7 @@ GITHUB_APP_INSTALLATION_ID
 GITHUB_APP_CLIENT_ID
 GITHUB_APP_CLIENT_SECRET
 
-They can also be provided in a ".env" file in the current working directory.
+They can also be provided in a ".env" file in the current working directory or at the path specified by the `ENV_FILE` environment variable.
 
 Positionals:
   tsconfig  Path to the TypeScript project configuration file [string] [default:
