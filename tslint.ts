@@ -18,7 +18,7 @@ export async function tslintCheck(
     check = await checkOptions.github.checks.create({
       owner: checkOptions.owner,
       repo: checkOptions.repo,
-      head_sha: getGitSHA(baseDir),
+      head_sha: checkOptions.sha || getGitSHA(baseDir),
       name: "TSLint",
       status: "in_progress"
     });

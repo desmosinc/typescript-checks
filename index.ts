@@ -14,6 +14,7 @@ const TSLINT_CHECK_APP_ID = 42099;
 type ParsedArgs = {
   tsconfig: string;
   repo?: string;
+  sha?: string;
 };
 
 export type CheckOptions = {
@@ -23,6 +24,7 @@ export type CheckOptions = {
   github: Octokit;
   owner: string;
   repo: string;
+  sha?: string;
 };
 
 const _ = require("yargs")
@@ -48,6 +50,11 @@ const _ = require("yargs")
         .option("repo", {
           describe: 'The github repository, "owner/repo"',
           type: "string"
+        })
+        .options("sha", {
+          describe:
+            "The git sha to which to post check results. Defaults to HEAD",
+          type: "string"
         });
     },
     (argv: ParsedArgs) => {
@@ -72,7 +79,8 @@ async function runChecks(argv: ParsedArgs) {
     check = {
       github: await authenticate(),
       owner,
-      repo
+      repo,
+      sha: argv.sha
     };
   }
 
