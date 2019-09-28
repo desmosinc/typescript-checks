@@ -1,6 +1,6 @@
 {
   "name": "@desmos/typescript-checks",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "",
   "main": "dist/index.js",
   "bin": "dist/index.js",
