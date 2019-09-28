@@ -19,7 +19,9 @@ export async function typescriptCheck(
       owner: checkOptions.owner,
       repo: checkOptions.repo,
       head_sha: checkOptions.sha || getGitSHA(baseDir),
-      name: "Typescript",
+      name: checkOptions.name
+        ? `Typescript - ${checkOptions.name}`
+        : "Typescript",
       status: "in_progress"
     });
     console.log(`Created check ${check.data.id} (${check.data.url})`);
@@ -53,7 +55,9 @@ export async function typescriptCheck(
         output: {
           annotations: batch,
           summary,
-          title: "Typescript"
+          title: checkOptions.name
+            ? `Typescript - ${checkOptions.name}`
+            : "Typescript"
         },
         conclusion: compileResult.hasFailures ? "failure" : "success"
       });

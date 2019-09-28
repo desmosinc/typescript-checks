@@ -15,6 +15,7 @@ type ParsedArgs = {
   tsconfig: string;
   repo?: string;
   sha?: string;
+  label?: string;
 };
 
 export type CheckOptions = {
@@ -22,6 +23,7 @@ export type CheckOptions = {
    * An Octokit instance, authenticated as a github app with checks:write permission
    */
   github: Octokit;
+  name?: string;
   owner: string;
   repo: string;
   sha?: string;
@@ -55,6 +57,10 @@ const _ = require("yargs")
           describe:
             "The git sha to which to post check results. Defaults to HEAD",
           type: "string"
+        })
+        .options("label", {
+          describe: "A label for this check run",
+          type: "string"
         });
     },
     (argv: ParsedArgs) => {
@@ -80,7 +86,8 @@ async function runChecks(argv: ParsedArgs) {
       github: await authenticate(),
       owner,
       repo,
-      sha: argv.sha
+      sha: argv.sha,
+      name: argv.label
     };
   }
 

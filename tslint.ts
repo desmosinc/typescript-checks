@@ -19,7 +19,7 @@ export async function tslintCheck(
       owner: checkOptions.owner,
       repo: checkOptions.repo,
       head_sha: checkOptions.sha || getGitSHA(baseDir),
-      name: "TSLint",
+      name: checkOptions.name ? `TSLint - ${checkOptions.name}` : "TSLint",
       status: "in_progress"
     });
     console.log(`Created check ${check.data.id} (${check.data.url})`);
@@ -50,7 +50,7 @@ export async function tslintCheck(
         output: {
           annotations: batch,
           summary,
-          title: "TSLint"
+          title: checkOptions.name ? `TSLint - ${checkOptions.name}` : "TSLint"
         },
         conclusion
       });
