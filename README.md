@@ -27,8 +27,7 @@ GITHUB_APP_CLIENT_SECRET
 They can also be provided in a ".env" file in the current working directory or at the path specified by the `ENV_FILE` environment variable.
 
 Positionals:
-  tsconfig  Path to the TypeScript project configuration file [string] [default:
-                  "/Users/anand/c/anandthakker/typescript-checks/tsconfig.json"]
+  tsconfig  Path to the TypeScript project configuration file [string] [default: "tsconfig.json"]
 
 Options:
   --version  Show version number                                       [boolean]
