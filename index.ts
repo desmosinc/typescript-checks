@@ -135,9 +135,7 @@ async function authenticate(): Promise<Octokit> {
   // Retrieve installation access token
   const installationAuthentication = await auth({ type: "installation" });
 
-  // workaround TS versions being inconsistent about how they handle the import
-  const octokit = require("@octokit/rest");
-  return new octokit({
+  return new Octokit({
     auth: installationAuthentication.token
   });
 }
