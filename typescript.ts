@@ -1,8 +1,8 @@
-import { ChecksCreateParamsOutputAnnotations } from "@octokit/rest";
 import * as path from "path";
 import * as ts from "typescript";
 import { CheckOptions } from ".";
 import { getGitRepositoryDirectoryForFile, getGitSHA } from "./git-helpers";
+import { GithubCheckAnnotation } from "./octokit-types";
 
 /**
  * Run Typescript compiler on the given project and post results to Github Checks API.
@@ -75,7 +75,7 @@ export function getDiagnosticsForProject(
   configFileName: string
 ): {
   hasFailures: boolean;
-  annotations: ChecksCreateParamsOutputAnnotations[];
+  annotations: GithubCheckAnnotation[];
   globalErrors: string[];
   consoleOutput: string;
 } {
@@ -106,7 +106,7 @@ export function getDiagnosticsForProject(
     .getPreEmitDiagnostics(program)
     .concat(emitResult.diagnostics);
 
-  const annotations: ChecksCreateParamsOutputAnnotations[] = [];
+  const annotations: GithubCheckAnnotation[] = [];
   const globalErrors = [];
   let hasFailures = false;
 

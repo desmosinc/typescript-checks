@@ -1,8 +1,9 @@
-import { ChecksCreateParamsOutputAnnotations } from "@octokit/rest";
 import * as path from "path";
 import { Configuration, Formatters, Linter } from "tslint";
 import { CheckOptions } from ".";
 import { getGitRepositoryDirectoryForFile, getGitSHA } from "./git-helpers";
+import { GithubCheckAnnotation } from "./octokit-types";
+
 
 /**
  * Run TSLin on the given project and post results to Github Checks API.
@@ -20,15 +21,15 @@ export async function tslintCheck(
       repo: checkOptions.repo,
       head_sha: checkOptions.sha || getGitSHA(baseDir),
       name: checkOptions.name ? `TSLint - ${checkOptions.name}` : "TSLint",
-      status: "in_progress"
+      status: "in_progress",
     });
     console.log(`Created check ${check.data.id} (${check.data.url})`);
   }
 
   const linterResult = getLintResultsForProject({ tsConfigFile });
-  const annotations = linterResult.annotations.map(a => ({
+  const annotations = linterResult.annotations.map((a) => ({
     ...a,
-    path: path.relative(baseDir, a.path) // patch file paths to be relative to git root
+    path: path.relative(baseDir, a.path), // patch file paths to be relative to git root
   }));
   const summary = `${linterResult.errorCount} errors, ${linterResult.warningCount} warnings.`;
   const conclusion = linterResult.errorCount > 0 ? "failure" : "success";
@@ -50,9 +51,9 @@ export async function tslintCheck(
         output: {
           annotations: batch,
           summary,
-          title: checkOptions.name ? `TSLint - ${checkOptions.name}` : "TSLint"
+          title: checkOptions.name ? `TSLint - ${checkOptions.name}` : "TSLint",
         },
-        conclusion
+        conclusion,
       });
       console.log(
         `Updated check ${update.data.id} with ${batch.length} annotations.`
@@ -69,7 +70,7 @@ export function getLintResultsForProject(options: {
   tsConfigFile: string;
 }): {
   consoleOutput: string;
-  annotations: ChecksCreateParamsOutputAnnotations[];
+  annotations: GithubCheckAnnotation[];
   errorCount: number;
   warningCount: number;
 } {
@@ -77,13 +78,13 @@ export function getLintResultsForProject(options: {
   const linter = new Linter(
     {
       fix: false,
-      formatter: Formatters.CodeFrameFormatter
+      formatter: Formatters.CodeFrameFormatter,
     },
     program
   );
 
   const files = Linter.getFileNames(program);
-  files.forEach(file => {
+  files.forEach((file) => {
     const fileContents = program.getSourceFile(file)!.getFullText();
     const configuration = Configuration.findConfiguration(
       options.tslintConfigFile || null,
@@ -93,19 +94,19 @@ export function getLintResultsForProject(options: {
   });
 
   const results = linter.getResult();
-  const annotations: ChecksCreateParamsOutputAnnotations[] = [];
+  const annotations: GithubCheckAnnotation[] = [];
   for (const failure of results.failures) {
     if (failure.getRuleSeverity() === "off") {
       continue;
     }
-    let annotation: ChecksCreateParamsOutputAnnotations = {
+    let annotation: GithubCheckAnnotation = {
       annotation_level:
         failure.getRuleSeverity() === "error" ? "failure" : "warning",
       path: failure.getFileName(),
       title: failure.getRuleName(),
       message: failure.getFailure(),
       start_line: failure.getStartPosition().getLineAndCharacter().line + 1,
-      end_line: failure.getEndPosition().getLineAndCharacter().line + 1
+      end_line: failure.getEndPosition().getLineAndCharacter().line + 1,
     };
     if (
       annotation.start_line &&
@@ -115,7 +116,8 @@ export function getLintResultsForProject(options: {
         ...annotation,
         start_column:
           failure.getStartPosition().getLineAndCharacter().character + 1,
-        end_column: failure.getEndPosition().getLineAndCharacter().character + 1
+        end_column:
+          failure.getEndPosition().getLineAndCharacter().character + 1,
       };
     }
     annotations.push(annotation);
@@ -125,6 +127,6 @@ export function getLintResultsForProject(options: {
     consoleOutput: results.output,
     annotations,
     errorCount: results.errorCount,
-    warningCount: results.warningCount
+    warningCount: results.warningCount,
   };
 }
