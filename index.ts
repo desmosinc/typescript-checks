@@ -13,18 +13,25 @@ import { typescriptCheck } from "./typescript";
 
 const TSLINT_CHECK_APP_ID = 42099;
 
-export type CheckOptions = {
+export type GithubInfo = {
   /**
    * An Octokit instance, authenticated as a github app with checks:write permission
    */
   github: Octokit;
-  name?: string;
   owner: string;
   repo: string;
   sha?: string;
 };
+export interface CheckResult {
+  consoleOutput: string;
+  annotations: GithubCheckAnnotation[];
+  errorCount: number;
+  warningCount: number;
+}
 
 import yargs from "yargs";
+import { getGitRepositoryDirectoryForFile, getGitSHA } from "./git-helpers";
+import { GithubCheckAnnotation } from "./octokit-types";
 
 // tslint:disable-next-line: no-unused-expression
 yargs
@@ -64,8 +71,11 @@ They can also be provided in a ".env" file in the current working directory.`
         type: "string",
         default: path.join(process.cwd(), "tsconfig.json")
       }),
-    async argv => {
-      typescriptCheck(argv.tsconfig, await getCheckOptions("Typescript", argv));
+    argv => {
+      runCheck("Typescript", () => typescriptCheck(argv.tsconfig), {
+        ...argv,
+        location: argv.tsconfig
+      });
     }
   )
   .command(
@@ -77,50 +87,125 @@ They can also be provided in a ".env" file in the current working directory.`
         type: "string",
         default: path.join(process.cwd(), "tsconfig.json")
       }),
-    async argv => {
-      tslintCheck(argv.tsconfig, await getCheckOptions("TSLint", argv));
-    }
+    argv =>
+      runCheck("TSLint", () => tslintCheck({ tsConfigFile: argv.tsconfig }), {
+        ...argv,
+        location: argv.tsconfig
+      })
   )
   .command(
     "eslint <directory>",
     "Check ESLint errors`",
     builder =>
-      builder.positional("directory", {
-        describe: "Location of files to lint",
-        type: "string",
-        demand: true
-      }),
-    async argv => {
-      eslintCheck(argv.directory || ".", await getCheckOptions("ESLint", argv));
-    }
+      builder
+        .positional("directory", {
+          describe: "Location of files to lint",
+          type: "string",
+          demand: true
+        })
+        .option("overrideConfig", {
+          describe: "ESLint configuration overrides as a JSON string",
+          type: "string",
+          default: "{}"
+        }),
+    argv =>
+      runCheck(
+        "ESLint",
+        () =>
+          eslintCheck([argv.directory || "."], JSON.parse(argv.overrideConfig)),
+        {
+          ...argv,
+          location: argv.directory || "."
+        }
+      )
   ).argv;
 
-async function getCheckOptions(
-  command: string,
-  argv: {
+async function runCheck(
+  commandName: string,
+  check: () => Promise<CheckResult>,
+  options: {
+    location: string;
+    label?: string;
     repo?: string;
     sha?: string;
-    label?: string;
   }
 ) {
-  let check: CheckOptions | undefined;
-  if (argv.repo) {
-    const [owner, repo] = argv.repo.split("/");
+  let gh: GithubInfo | undefined;
+  if (options.repo) {
+    const [owner, repo] = options.repo.split("/");
     if (!owner || !repo) {
       console.error(
-        `Invalid --repo argument ${argv.repo}. Expected "owner/repo".`
+        `Invalid --repo argument ${options.repo}. Expected "owner/repo".`
       );
       process.exit(1);
     }
-    check = {
+    gh = {
       github: await authenticate(),
       owner,
       repo,
-      sha: argv.sha,
-      name: argv.label || command
+      sha: options.sha
     };
   }
-  return check;
+
+  const commandAndLabel = options.label
+    ? `${commandName} - ${options.label}`
+    : commandName;
+
+  const baseDir = getGitRepositoryDirectoryForFile(options.location);
+
+  let ghCheck;
+  if (gh) {
+    ghCheck = await gh.github.checks.create({
+      owner: gh.owner,
+      repo: gh.repo,
+      head_sha: gh.sha || getGitSHA(baseDir),
+      name: commandAndLabel,
+      status: "in_progress"
+    });
+    console.log(`Created check ${ghCheck.data.id} (${ghCheck.data.url})`);
+  }
+
+  const linterResult = await check();
+  const annotations = linterResult.annotations.map(a => ({
+    ...a,
+    path: path.relative(baseDir, a.path) // patch file paths to be relative to git root
+  }));
+  const summary = `${linterResult.errorCount} errors, ${linterResult.warningCount} warnings.`;
+  const conclusion =
+    linterResult.errorCount + linterResult.warningCount > 0
+      ? "failure"
+      : "success";
+
+  console.log(`${commandAndLabel}: ${summary}`);
+  console.log(linterResult.consoleOutput);
+
+  if (gh && ghCheck) {
+    for (
+      let updateCount = 0;
+      updateCount === 0 || annotations.length > 0;
+      updateCount++
+    ) {
+      const batch = annotations.splice(0, 50);
+      const update = await gh.github.checks.update({
+        check_run_id: ghCheck.data.id,
+        owner: gh.owner,
+        repo: gh.repo,
+        output: {
+          annotations: batch,
+          summary,
+          title: commandAndLabel
+        },
+        conclusion
+      });
+      console.log(
+        `Updated check ${update.data.id} with ${batch.length} annotations.`
+      );
+    }
+  }
+
+  if (conclusion === "failure") {
+    process.exit(1);
+  }
 }
 
 async function authenticate(): Promise<Octokit> {
