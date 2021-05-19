@@ -4,7 +4,6 @@ import { CheckOptions } from ".";
 import { getGitRepositoryDirectoryForFile, getGitSHA } from "./git-helpers";
 import { GithubCheckAnnotation } from "./octokit-types";
 
-
 /**
  * Run TSLin on the given project and post results to Github Checks API.
  */
