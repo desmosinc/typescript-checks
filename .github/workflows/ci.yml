@@ -23,7 +23,9 @@ jobs:
         npm install typescript@${{ matrix.typescript-version}}
     - name: Run checks
       run: |
-        ./dist/index.js tsconfig.json
+        ./dist/index.js tsc tsconfig.json
+        ./dist/index.js tslint tsconfig.json
+        ./dist/index.js eslint .
   report-typescript-checks:
     runs-on: ubuntu-latest
     steps:
@@ -38,7 +40,9 @@ jobs:
         npm run build
     - name: Run and report checks
       run: |
-        ./dist/index.js tsconfig.json --repo ${{ github.repository }}
+        ./dist/index.js tsc tsconfig.json --repo ${{ github.repository }}
+        ./dist/index.js tslint tsconfig.json --repo ${{ github.repository }}
+        ./dist/index.js eslint tsconfig.json --repo ${{ github.repository }}
       env:
         GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
         GITHUB_APP_INSTALLATION_ID: ${{ secrets.GITHUB_APP_INSTALLATION_ID }}
