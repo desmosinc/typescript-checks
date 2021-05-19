@@ -11,10 +11,24 @@ Get Typescript and TSLint diagnostics and post results as a GitHub Check.
 
 ```
 > typescript-checks --help
-typescript-checks <tsconfig> --repo organization/repository
+typescript-checks [command]
 
-Get Typescript and TSLint diagnostics for the Typescript project and post
-results as a "check run" to the given GitHub repository.
+Commands:
+  index.ts tsc <tsconfig>      Check TypeScript errors
+  index.ts tslint <tsconfig>   Check TSLint errors
+  index.ts eslint <directory>  Check ESLint errors
+
+Options:
+  --help     Show help                                                 [boolean]
+  --version  Show version number                                       [boolean]
+  --repo     The github repository, "owner/repo"                        [string]
+  --sha      The git sha to which to post check results. Defaults to HEAD
+                                                                        [string]
+  --label    A label for this check run                                 [string]
+
+
+This tool gets TypeScript, TSLint, or ESLint diagnostics and posts results as a
+"check run" to the given GitHub repository.
 
 The following environment variables, corresponding to a GitHub app with
 'checks:write' permission, are used to authenticate with the GitHub API:
@@ -24,14 +38,5 @@ GITHUB_APP_INSTALLATION_ID
 GITHUB_APP_CLIENT_ID
 GITHUB_APP_CLIENT_SECRET
 
-They can also be provided in a ".env" file in the current working directory or at the path specified by the `ENV_FILE` environment variable.
-
-Positionals:
-  tsconfig  Path to the TypeScript project configuration file [string] [default: "tsconfig.json"]
-
-Options:
-  --version  Show version number                                       [boolean]
-  --help     Show help                                                 [boolean]
-  --repo     The github repository, "owner/repo"
-  ```
-
+They can also be provided in a ".env" file in the current working directory.
+```

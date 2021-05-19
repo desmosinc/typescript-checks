@@ -1,84 +1,13 @@
-import { ChecksCreateParamsOutputAnnotations } from "@octokit/rest";
-import * as path from "path";
 import * as ts from "typescript";
-import { CheckOptions } from ".";
-import { getGitRepositoryDirectoryForFile, getGitSHA } from "./git-helpers";
-
-/**
- * Run Typescript compiler on the given project and post results to Github Checks API.
- */
-export async function typescriptCheck(
-  tsConfigFile: string,
-  checkOptions?: CheckOptions
-) {
-  const baseDir = getGitRepositoryDirectoryForFile(tsConfigFile);
-
-  let check;
-  if (checkOptions) {
-    check = await checkOptions.github.checks.create({
-      owner: checkOptions.owner,
-      repo: checkOptions.repo,
-      head_sha: checkOptions.sha || getGitSHA(baseDir),
-      name: checkOptions.name
-        ? `Typescript - ${checkOptions.name}`
-        : "Typescript",
-      status: "in_progress"
-    });
-    console.log(`Created check ${check.data.id} (${check.data.url})`);
-  }
-
-  const compileResult = getDiagnosticsForProject(tsConfigFile);
-  compileResult.annotations = compileResult.annotations.map(a => ({
-    ...a,
-    path: path.relative(baseDir, a.path) // patch file paths to be relative to git root
-  }));
-
-  const summary =
-    `${compileResult.globalErrors.length +
-      compileResult.annotations.length} errors.\n\n` +
-    compileResult.globalErrors.join("\n");
-
-  console.log(`Typescript: ${summary}`);
-  console.log(compileResult.consoleOutput);
-
-  if (checkOptions && check) {
-    for (
-      let updateCount = 0;
-      updateCount === 0 || compileResult.annotations.length > 0;
-      updateCount++
-    ) {
-      const batch = compileResult.annotations.splice(0, 50);
-      const update = await checkOptions.github.checks.update({
-        check_run_id: check.data.id,
-        owner: checkOptions.owner,
-        repo: checkOptions.repo,
-        output: {
-          annotations: batch,
-          summary,
-          title: checkOptions.name
-            ? `Typescript - ${checkOptions.name}`
-            : "Typescript"
-        },
-        conclusion: compileResult.hasFailures ? "failure" : "success"
-      });
-      console.log(
-        `Updated check ${update.data.id} with ${batch.length} annotations.`
-      );
-    }
-  }
-}
+import { CheckResult } from ".";
+import { GithubCheckAnnotation } from "./octokit-types";
 
 /**
  * Get all Typescript compiler diagnostics for the given TS project.
  */
-export function getDiagnosticsForProject(
+export async function typescriptCheck(
   configFileName: string
-): {
-  hasFailures: boolean;
-  annotations: ChecksCreateParamsOutputAnnotations[];
-  globalErrors: string[];
-  consoleOutput: string;
-} {
+): Promise<CheckResult> {
   const diagnosticHost = {
     getCurrentDirectory: ts.sys.getCurrentDirectory,
     getNewLine: () => ts.sys.newLine,
@@ -96,8 +25,8 @@ export function getDiagnosticsForProject(
     }
   );
 
-  const program = ts.createProgram(parsedCommandLine!.fileNames, {
-    ...parsedCommandLine!.options,
+  const program = ts.createProgram(parsedCommandLine?.fileNames || [], {
+    ...parsedCommandLine?.options,
     noEmit: true
   });
   const emitResult = program.emit();
@@ -106,17 +35,24 @@ export function getDiagnosticsForProject(
     .getPreEmitDiagnostics(program)
     .concat(emitResult.diagnostics);
 
-  const annotations: ChecksCreateParamsOutputAnnotations[] = [];
+  const annotations: GithubCheckAnnotation[] = [];
   const globalErrors = [];
-  let hasFailures = false;
+  let errorCount = 0;
+  let warningCount = 0;
 
   for (const diagnostic of allDiagnostics) {
+    if (diagnostic.category === ts.DiagnosticCategory.Error) {
+      errorCount++;
+    } else if (diagnostic.category === ts.DiagnosticCategory.Warning) {
+      warningCount++;
+    }
+
     if (diagnostic.file) {
       const start = diagnostic.file.getLineAndCharacterOfPosition(
-        diagnostic.start!
+        diagnostic.start ?? 0
       );
       const end = diagnostic.file.getLineAndCharacterOfPosition(
-        diagnostic.start! + diagnostic.length!
+        (diagnostic.start ?? 0) + (diagnostic.length ?? 0)
       );
 
       annotations.push({
@@ -131,22 +67,26 @@ export function getDiagnosticsForProject(
         message: ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
         path: diagnostic.file.fileName
       });
-
-      if (diagnostic.category === ts.DiagnosticCategory.Error) {
-        hasFailures = true;
-      }
     } else if (diagnostic.category === ts.DiagnosticCategory.Error) {
       globalErrors.push(
         ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")
       );
-      hasFailures = true;
     }
   }
 
-  const consoleOutput = ts.formatDiagnosticsWithColorAndContext(
+  let consoleOutput = ts.formatDiagnosticsWithColorAndContext(
     allDiagnostics,
     diagnosticHost
   );
 
-  return { hasFailures, annotations, globalErrors, consoleOutput };
+  if (globalErrors.length > 0) {
+    consoleOutput = `${globalErrors.join("\n")}\n${consoleOutput}`;
+  }
+
+  return {
+    errorCount,
+    warningCount,
+    annotations,
+    consoleOutput
+  };
 }
