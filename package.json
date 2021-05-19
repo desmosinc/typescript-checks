@@ -10,9 +10,11 @@
     "dist"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "./dist/index.js tsconfig.json",
+    "typecheck": "./dist/index.js tsc tsconfig.json",
+    "tslint": "./dist/index.js tslint tsconfig.json",
+    "eslint": "./dist/index.js eslint tsconfig.json",
     "build": "tsc -p tsconfig.json && chmod +x dist/index.js",
+    "watch": "tsc -w -p tsconfig.json",
     "prepublish": "npm run build",
     "prepare": "husky install"
   },
@@ -33,6 +35,8 @@
   "devDependencies": {
     "@types/eslint": "^7.2.10",
     "@types/yargs": "^16.0.2",
+    "@typescript-eslint/eslint-plugin": "^4.24.0",
+    "@typescript-eslint/parser": "^4.24.0",
     "eslint": "^7.26.0",
     "husky": "^6.0.0",
     "lint-staged": "^11.0.0",

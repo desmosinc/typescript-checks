@@ -26,7 +26,8 @@ export type CheckOptions = {
 
 import yargs from "yargs";
 
-const _ = yargs
+// tslint:disable-next-line: no-unused-expression
+yargs
   .usage(
     "$0 --label ... --repo org/repository --sha ... [command]",
     `
@@ -90,7 +91,7 @@ They can also be provided in a ".env" file in the current working directory.`
         demand: true
       }),
     async argv => {
-      eslintCheck(argv.directory!, await getCheckOptions("ESLint", argv));
+      eslintCheck(argv.directory || ".", await getCheckOptions("ESLint", argv));
     }
   ).argv;
 

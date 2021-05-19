@@ -1,7 +1,7 @@
 import * as cp from "child_process";
 import * as path from "path";
 
-export function getGitRepositoryDirectoryForFile(file: string) {
+export function getGitRepositoryDirectoryForFile(file: string): string {
   return cp
     .execSync("git rev-parse --show-toplevel", {
       cwd: path.dirname(file),
@@ -10,7 +10,7 @@ export function getGitRepositoryDirectoryForFile(file: string) {
     .trim();
 }
 
-export function getGitSHA(dir: string) {
+export function getGitSHA(dir: string): string {
   return cp
     .execSync("git rev-parse HEAD", {
       cwd: dir,

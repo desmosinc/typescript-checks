@@ -10,7 +10,7 @@ import { GithubCheckAnnotation } from "./octokit-types";
 export async function typescriptCheck(
   tsConfigFile: string,
   checkOptions?: CheckOptions
-) {
+): Promise<void> {
   const baseDir = getGitRepositoryDirectoryForFile(tsConfigFile);
 
   let check;
@@ -22,15 +22,15 @@ export async function typescriptCheck(
       name: checkOptions.name
         ? `Typescript - ${checkOptions.name}`
         : "Typescript",
-      status: "in_progress",
+      status: "in_progress"
     });
     console.log(`Created check ${check.data.id} (${check.data.url})`);
   }
 
   const compileResult = getDiagnosticsForProject(tsConfigFile);
-  compileResult.annotations = compileResult.annotations.map((a) => ({
+  compileResult.annotations = compileResult.annotations.map(a => ({
     ...a,
-    path: path.relative(baseDir, a.path), // patch file paths to be relative to git root
+    path: path.relative(baseDir, a.path) // patch file paths to be relative to git root
   }));
 
   const summary =
@@ -57,9 +57,9 @@ export async function typescriptCheck(
           summary,
           title: checkOptions.name
             ? `Typescript - ${checkOptions.name}`
-            : "Typescript",
+            : "Typescript"
         },
-        conclusion: compileResult.hasFailures ? "failure" : "success",
+        conclusion: compileResult.hasFailures ? "failure" : "success"
       });
       console.log(
         `Updated check ${update.data.id} with ${batch.length} annotations.`
@@ -82,7 +82,7 @@ export function getDiagnosticsForProject(
   const diagnosticHost = {
     getCurrentDirectory: ts.sys.getCurrentDirectory,
     getNewLine: () => ts.sys.newLine,
-    getCanonicalFileName: (s: string) => s,
+    getCanonicalFileName: (s: string) => s
   };
 
   const parsedCommandLine = ts.getParsedCommandLineOfConfigFile(
@@ -92,13 +92,13 @@ export function getDiagnosticsForProject(
       ...ts.sys,
       onUnRecoverableConfigFileDiagnostic: (diagnostic: ts.Diagnostic) => {
         ts.formatDiagnostic(diagnostic, diagnosticHost);
-      },
+      }
     }
   );
 
-  const program = ts.createProgram(parsedCommandLine!.fileNames, {
-    ...parsedCommandLine!.options,
-    noEmit: true,
+  const program = ts.createProgram(parsedCommandLine?.fileNames || [], {
+    ...parsedCommandLine?.options,
+    noEmit: true
   });
   const emitResult = program.emit();
 
@@ -113,10 +113,10 @@ export function getDiagnosticsForProject(
   for (const diagnostic of allDiagnostics) {
     if (diagnostic.file) {
       const start = diagnostic.file.getLineAndCharacterOfPosition(
-        diagnostic.start!
+        diagnostic.start ?? 0
       );
       const end = diagnostic.file.getLineAndCharacterOfPosition(
-        diagnostic.start! + diagnostic.length!
+        (diagnostic.start ?? 0) + (diagnostic.length ?? 0)
       );
 
       annotations.push({
@@ -129,7 +129,7 @@ export function getDiagnosticsForProject(
         start_line: start.line + 1,
         end_line: end.line + 1,
         message: ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
-        path: diagnostic.file.fileName,
+        path: diagnostic.file.fileName
       });
 
       if (diagnostic.category === ts.DiagnosticCategory.Error) {

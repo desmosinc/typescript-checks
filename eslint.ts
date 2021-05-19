@@ -10,7 +10,7 @@ import { GithubCheckAnnotation } from "./octokit-types";
 export async function eslintCheck(
   directory: string,
   checkOptions?: CheckOptions
-) {
+): Promise<void> {
   const baseDir = getGitRepositoryDirectoryForFile(directory);
 
   let check;
