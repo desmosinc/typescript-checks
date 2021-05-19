@@ -6,7 +6,7 @@ require("dotenv").config({
   path: process.env.ENV_FILE || path.join(process.cwd(), ".env")
 });
 import { createAppAuth } from "@octokit/auth-app";
-import * as Octokit from "@octokit/rest";
+import { Octokit } from "@octokit/rest";
 import { tslintCheck } from "./tslint";
 import { typescriptCheck } from "./typescript";
 
