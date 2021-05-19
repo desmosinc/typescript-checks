@@ -35,11 +35,9 @@ import { GithubCheckAnnotation } from "./octokit-types";
 
 // tslint:disable-next-line: no-unused-expression
 yargs
-  .usage(
-    "$0 --label ... --repo org/repository --sha ... [command]",
+  .epilogue(
     `
-
-Get TypeScript or linting diagnostics and post results as a "check run" to the given GitHub repository.
+This tool gets TypeScript, TSLint, or ESLint diagnostics and posts results as a "check run" to the given GitHub repository.
 
 The following environment variables, corresponding to a GitHub app with 'checks:write' permission, are used to authenticate with the GitHub API:
 
@@ -95,7 +93,7 @@ They can also be provided in a ".env" file in the current working directory.`
   )
   .command(
     "eslint <directory>",
-    "Check ESLint errors`",
+    "Check ESLint errors",
     builder =>
       builder
         .positional("directory", {
