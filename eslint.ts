@@ -27,10 +27,9 @@ export async function eslintCheck(
   };
 
   for (const result of results) {
+    out.errorCount += result.errorCount;
+    out.warningCount += result.warningCount;
     for (const message of result.messages) {
-      out.errorCount += result.errorCount;
-      out.warningCount += result.warningCount;
-
       if (message.severity !== 0) {
         let annotation: GithubCheckAnnotation = {
           annotation_level: message.severity === 2 ? "failure" : "warning",
