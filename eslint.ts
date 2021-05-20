@@ -37,8 +37,8 @@ export async function eslintCheck(
           path: result.filePath,
           title: message.ruleId || undefined,
           message: message.message,
-          start_line: message.line,
-          end_line: message.endLine || message.line
+          start_line: message.line || 1,
+          end_line: message.endLine || message.line || 1
         };
         if (
           annotation.start_line &&
