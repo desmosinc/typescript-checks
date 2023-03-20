@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tslint:disable:no-var-requires
+// eslint-disable @typescript-eslint/no-var-requires
 require("ts-node/register/transpile-only");
 import * as path from "path";
 require("dotenv").config({
@@ -8,10 +8,9 @@ require("dotenv").config({
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
 import { eslintCheck } from "./eslint";
-import { tslintCheck } from "./tslint";
 import { typescriptCheck } from "./typescript";
 
-const TSLINT_CHECK_APP_ID = 42099;
+const TYPESCRIPT_CHECK_APP_ID = 42099;
 
 export type GithubInfo = {
   /**
@@ -33,11 +32,11 @@ import yargs from "yargs";
 import { getGitRepositoryDirectoryForFile, getGitSHA } from "./git-helpers";
 import { GithubCheckAnnotation } from "./octokit-types";
 
-// tslint:disable-next-line: no-unused-expression
+// eslint-disable-next-line no-unused-expressions
 yargs
   .epilogue(
     `
-This tool gets TypeScript, TSLint, or ESLint diagnostics and posts results as a "check run" to the given GitHub repository.
+This tool gets TypeScript or ESLint diagnostics and posts results as a "check run" to the given GitHub repository.
 
 The following environment variables, corresponding to a GitHub app with 'checks:write' permission, are used to authenticate with the GitHub API:
 
@@ -75,21 +74,6 @@ They can also be provided in a ".env" file in the current working directory.`
         location: argv.tsconfig
       });
     }
-  )
-  .command(
-    "tslint <tsconfig>",
-    "Check TSLint errors",
-    builder =>
-      builder.positional("tsconfig", {
-        describe: "Path to the TypeScript project configuration file",
-        type: "string",
-        default: path.join(process.cwd(), "tsconfig.json")
-      }),
-    argv =>
-      runCheck("TSLint", () => tslintCheck({ tsConfigFile: argv.tsconfig }), {
-        ...argv,
-        location: argv.tsconfig
-      })
   )
   .command(
     "eslint <directory>",
@@ -208,7 +192,7 @@ async function runCheck(
 
 async function authenticate(): Promise<Octokit> {
   const auth = createAppAuth({
-    id: TSLINT_CHECK_APP_ID,
+    id: TYPESCRIPT_CHECK_APP_ID,
     privateKey: process.env.GITHUB_APP_PRIVATE_KEY || "",
     installationId: Number(process.env.GITHUB_APP_INSTALLATION_ID),
     clientId: process.env.GITHUB_APP_CLIENT_ID,

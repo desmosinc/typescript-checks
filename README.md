@@ -1,11 +1,11 @@
 # typescript-checks
 
-Get Typescript and TSLint diagnostics and post results as a GitHub Check.
+Get Typescript and ESLint diagnostics and post results as a GitHub Check.
 
 ## Prerequisites
 
 - [Set up a GitHub App](https://developer.github.com/apps/quickstart-guides/setting-up-your-development-environment) that requests `checks:write` permissions.
-- Install the app for the repo where you want to run TS / TSLint checks.
+- Install the app for the repo where you want to run TS / ESLint checks.
 
 ## Usage
 
@@ -15,7 +15,6 @@ typescript-checks [command]
 
 Commands:
   index.ts tsc <tsconfig>      Check TypeScript errors
-  index.ts tslint <tsconfig>   Check TSLint errors
   index.ts eslint <directory>  Check ESLint errors
 
 Options:
@@ -27,7 +26,7 @@ Options:
   --label    A label for this check run                                 [string]
 
 
-This tool gets TypeScript, TSLint, or ESLint diagnostics and posts results as a
+This tool gets TypeScript or ESLint diagnostics and posts results as a
 "check run" to the given GitHub repository.
 
 The following environment variables, corresponding to a GitHub app with
